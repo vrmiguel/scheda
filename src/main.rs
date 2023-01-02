@@ -1,19 +1,5 @@
-pub mod core;
-mod error;
-mod parser;
-
-pub use chrono::Weekday;
-
-// pub enum Weekday {
-//     Sunday = 1,
-//     Monday,
-//     Tuesday,
-//     Wednesday,
-//     Thursday,
-//     Friday,
-//     Saturday
-// }
+use scheda_parser::parser::Parser;
 
 fn main() {
-    println!("Hello, world!");
+    dbg!(Parser::new("when month feb to dec, day 12 or 16 to 17").parse_schedule().unwrap());
 }

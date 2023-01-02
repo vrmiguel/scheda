@@ -1,17 +1,105 @@
 use std::ops::Range;
 
+use chrono::Month;
+
 use crate::error::{Error, Result};
 
 mod month;
+mod weekday;
+mod day;
 
-use crate::core::WellFormedRange;
+use crate::core::{DateTimePart, DateTimePartKind, Schedule, WellFormedRange, MonthDay};
 
 /// Attempts to parse a single "atom"
 pub trait AtomParse: Sized {
     fn parse_atom(val: &str) -> Option<Self>;
 }
 
-pub fn parse_schedule(schedule: &str) {}
+pub struct Parser<'a> {
+    input: &'a str,
+    schedule: Schedule,
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(input: &'a str) -> Parser<'a> {
+        Self {
+            input: input.trim(),
+            schedule: Schedule::new(),
+        }
+    }
+}
+
+impl<'a> Parser<'a> {
+    pub fn eat_when(&mut self) -> Result<()> {
+        let (before_when, remaining) = self
+            .input
+            .split_once("when")
+            .ok_or(Error::MissingWhenStmt)?;
+
+        // TODO: treat this with the error enum
+        assert!(before_when.is_empty());
+
+        self.input = remaining;
+
+        Ok(())
+    }
+
+    fn parse_kind<'b>(&'a self, value: &'b str) -> Result<(DateTimePartKind, &'b str)> {
+        // TODO: treat error
+        let (identifier, rest) = value.split_once(' ').unwrap();
+
+        DateTimePartKind::from_str(identifier).map(|kind| (kind, rest))
+    }
+
+    pub fn parse_atom_or_range<T: AtomParse + WellFormedRange>(
+        &mut self,
+        value: &str,
+    ) -> Result<DateTimePart<T>> {
+        match parse_range(value) {
+            Ok(range) => Ok(DateTimePart::Range {
+                starting: range.start,
+                ending: range.end,
+            }),
+            Err(_) => {
+                // TODO: why error handling so bad :C
+                let atom = T::parse_atom(value).ok_or(Error::InvalidSyntax(value.into()))?;
+                Ok(DateTimePart::Single(atom))
+            },
+        }
+    }
+
+    pub fn parse_spec(&mut self, value: &str) -> Result<()> {
+        let (kind, rest) = self.parse_kind(value)?;
+
+        for item in rest.split(" or ") {
+            match kind {
+                DateTimePartKind::Month => {
+                    let part = self.parse_atom_or_range::<Month>(item)?;
+                    self.schedule.month_spec.push(part);
+                }
+                DateTimePartKind::Day => {
+                    let part = self.parse_atom_or_range::<MonthDay>(item)?;
+                    self.schedule.day_spec.push(part);
+                },
+                DateTimePartKind::Hour => todo!(),
+                DateTimePartKind::Minute => todo!(),
+                DateTimePartKind::Every => todo!(),
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn parse_schedule(mut self) -> Result<Schedule> {
+        self.eat_when()?;
+        
+        for decl in self.input.split(',') {            
+            self.parse_spec(decl.trim())?;
+        }
+
+        Ok(self.schedule)
+    }
+}
 
 fn nothing() {}
 
@@ -46,7 +134,13 @@ mod tests {
     use chrono::Month;
     use std::ops::Range;
 
-    use super::parse_range;
+    use super::{parse_range, Parser};
+
+    #[test]
+    fn parses_month_specs() {
+        Parser::new("when month feb to mar").parse_schedule().unwrap();
+        Parser::new("when month 10").parse_schedule().unwrap();
+    }
 
     #[test]
     fn parses_month_ranges() {
@@ -82,7 +176,7 @@ mod tests {
         // Bad: beginning bigger than ending
         assert!(parse_range::<Month>("10 to 5").is_err());
         assert!(parse_range::<Month>("Dec to Feb").is_err());
-        
+
         // Bad: single-point ranges are not allowed
         assert!(parse_range::<Month>("Dec to Dec").is_err());
         assert!(parse_range::<Month>("february to Feb").is_err());
