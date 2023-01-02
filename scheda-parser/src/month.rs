@@ -1,5 +1,5 @@
-use chrono::Month;
 use num_traits::FromPrimitive;
+use scheda_core::chrono::Month;
 
 use super::AtomParse;
 
@@ -57,7 +57,7 @@ fn parse_month(val: &str) -> Option<Month> {
 
 #[cfg(test)]
 mod tests {
-    use chrono::Month;
+    use scheda_core::chrono::Month;
 
     use super::AtomParse;
 

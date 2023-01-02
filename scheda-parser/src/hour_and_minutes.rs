@@ -1,4 +1,4 @@
-use crate::core::{Hour, Minute, WellFormedRange};
+use scheda_core::{Hour, Minute};
 
 use super::AtomParse;
 
@@ -16,22 +16,10 @@ impl AtomParse for Hour {
     }
 }
 
-impl WellFormedRange for Hour {
-    fn is_well_formed(range: &std::ops::Range<Self>) -> bool {
-        range.start.as_u8() < range.end.as_u8()
-    }
-}
-
 impl AtomParse for Minute {
     fn parse_atom(val: &str) -> Option<Self> {
         let trimmed = val.trim();
 
         parse_ranged(trimmed, 60).and_then(Minute::new)
-    }
-}
-
-impl WellFormedRange for Minute {
-    fn is_well_formed(range: &std::ops::Range<Self>) -> bool {
-        range.start.as_u8() < range.end.as_u8()
     }
 }

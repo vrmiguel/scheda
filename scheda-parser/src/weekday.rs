@@ -1,6 +1,4 @@
-use chrono::Weekday;
-
-use crate::core::WellFormedRange;
+use scheda_core::chrono::Weekday;
 
 use super::AtomParse;
 
@@ -11,12 +9,6 @@ impl AtomParse for Weekday {
         parse_weekday_idx(trimmed)
             .or_else(|| parse_weekday_abbr(trimmed))
             .or_else(|| parse_weekday(trimmed))
-    }
-}
-
-impl WellFormedRange for Weekday {
-    fn is_well_formed(range: &std::ops::Range<Self>) -> bool {
-        range.start.num_days_from_sunday() < range.end.num_days_from_sunday()
     }
 }
 

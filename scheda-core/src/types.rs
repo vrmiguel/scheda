@@ -1,21 +1,9 @@
-use std::{num::NonZeroU8, ops::Range};
+use std::{num::NonZeroU8};
 
 use chrono::{Month, Weekday};
 use smallvec::SmallVec;
 
-use crate::error::{Error, Result};
-
-// TODO: Revisit ZeroToN to check if we want to use it
-// struct ZeroToN<const N: usize>(NonZeroU8);
-
-// impl <const N: usize> ZeroToN<N> {
-//     pub fn new(val: u8) -> Option<Self> {
-//         (val <= (N as u8)).then(|| {
-//             // Safety: val+1 can never be zero once val is unsigned
-//             Self(unsafe { NonZeroU8::new_unchecked(val + 1) })
-//         })
-//     }
-// }
+use crate::{Error, Result};
 
 #[derive(Debug)]
 pub struct Hour(NonZeroU8);
@@ -64,15 +52,6 @@ impl MonthDay {
     }
 }
 
-pub trait WellFormedRange: Sized {
-    fn is_well_formed(range: &Range<Self>) -> bool;
-}
-
-impl WellFormedRange for Month {
-    fn is_well_formed(range: &Range<Self>) -> bool {
-        range.start.number_from_month() < range.end.number_from_month()
-    }
-}
 
 /// Specification for months.
 ///
@@ -141,15 +120,15 @@ pub enum Spec {
 #[derive(Debug)]
 pub struct Schedule {
     /// The specification for month days
-    pub(crate) hour_spec: SmallVec<[DateTimePart<Hour>; 2]>,
+    pub hour_spec: SmallVec<[DateTimePart<Hour>; 2]>,
     /// The specification for month days
-    pub(crate) minute_spec: SmallVec<[DateTimePart<Minute>; 2]>,
+    pub minute_spec: SmallVec<[DateTimePart<Minute>; 2]>,
     /// The specification for month days
-    pub(crate) day_spec: SmallVec<[DateTimePart<MonthDay>; 4]>,
+    pub day_spec: SmallVec<[DateTimePart<MonthDay>; 4]>,
     /// The specification for months
-    pub(crate) month_spec: SmallVec<[DateTimePart<Month>; 4]>,
+    pub month_spec: SmallVec<[DateTimePart<Month>; 4]>,
     /// The specification for months
-    pub(crate) weekday_spec: SmallVec<[DateTimePart<Weekday>; 4]>,
+    pub weekday_spec: SmallVec<[DateTimePart<Weekday>; 4]>,
     // TODO: add timezone
 }
 

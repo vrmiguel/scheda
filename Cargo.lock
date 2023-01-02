@@ -274,7 +274,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "456c603be3e8d448b072f410900c09faf164fbce2d480456f50eea6e25f9c848"
 
 [[package]]
-name = "scheda-parser"
+name = "scheda-core"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -282,6 +282,14 @@ dependencies = [
  "nom",
  "num-traits",
  "smallvec",
+]
+
+[[package]]
+name = "scheda-parser"
+version = "0.1.0"
+dependencies = [
+ "num-traits",
+ "scheda-core",
 ]
 
 [[package]]

@@ -1,13 +1,11 @@
 use std::ops::Range;
 
-use crate::error::{Error, Result};
-
 mod day;
 mod hour_and_minutes;
 mod month;
 mod weekday;
 
-use crate::core::{DateTimePart, DateTimePartKind, Schedule, WellFormedRange};
+use scheda_core::{DateTimePart, DateTimePartKind, Error, Result, Schedule, WellFormedRange};
 
 /// Attempts to parse a single "atom"
 pub trait AtomParse: Sized {
@@ -142,7 +140,7 @@ pub fn parse_range<T: AtomParse + WellFormedRange>(input: &str) -> Result<Range<
 
 #[cfg(test)]
 mod tests {
-    use chrono::Month;
+    use scheda_core::chrono::Month;
     use std::ops::Range;
 
     use super::{parse_range, Parser};
