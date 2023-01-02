@@ -1,14 +1,13 @@
 use std::ops::Range;
 
-use chrono::Month;
-
 use crate::error::{Error, Result};
 
+mod day;
+mod hour_and_minutes;
 mod month;
 mod weekday;
-mod day;
 
-use crate::core::{DateTimePart, DateTimePartKind, Schedule, WellFormedRange, MonthDay};
+use crate::core::{DateTimePart, DateTimePartKind, Schedule, WellFormedRange};
 
 /// Attempts to parse a single "atom"
 pub trait AtomParse: Sized {
@@ -48,7 +47,7 @@ impl<'a> Parser<'a> {
         // TODO: treat error
         let (identifier, rest) = value.split_once(' ').unwrap();
 
-        DateTimePartKind::from_str(identifier).map(|kind| (kind, rest))
+        DateTimePartKind::parse(identifier).map(|kind| (kind, rest))
     }
 
     pub fn parse_atom_or_range<T: AtomParse + WellFormedRange>(
@@ -64,7 +63,7 @@ impl<'a> Parser<'a> {
                 // TODO: why error handling so bad :C
                 let atom = T::parse_atom(value).ok_or(Error::InvalidSyntax(value.into()))?;
                 Ok(DateTimePart::Single(atom))
-            },
+            }
         }
     }
 
@@ -74,15 +73,25 @@ impl<'a> Parser<'a> {
         for item in rest.split(" or ") {
             match kind {
                 DateTimePartKind::Month => {
-                    let part = self.parse_atom_or_range::<Month>(item)?;
+                    let part = self.parse_atom_or_range(item)?;
                     self.schedule.month_spec.push(part);
                 }
                 DateTimePartKind::Day => {
-                    let part = self.parse_atom_or_range::<MonthDay>(item)?;
+                    let part = self.parse_atom_or_range(item)?;
                     self.schedule.day_spec.push(part);
-                },
-                DateTimePartKind::Hour => todo!(),
-                DateTimePartKind::Minute => todo!(),
+                }
+                DateTimePartKind::Weekday => {
+                    let part = self.parse_atom_or_range(item)?;
+                    self.schedule.weekday_spec.push(part);
+                }
+                DateTimePartKind::Hour => {
+                    let part = self.parse_atom_or_range(item)?;
+                    self.schedule.hour_spec.push(part);
+                }
+                DateTimePartKind::Minute => {
+                    let part = self.parse_atom_or_range(item)?;
+                    self.schedule.minute_spec.push(part);
+                }
                 DateTimePartKind::Every => todo!(),
             }
         }
@@ -91,9 +100,11 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_schedule(mut self) -> Result<Schedule> {
+        // Eat the leading `when` statement
         self.eat_when()?;
-        
-        for decl in self.input.split(',') {            
+
+        // Date-time parts are separated by commas
+        for decl in self.input.split(',') {
             self.parse_spec(decl.trim())?;
         }
 
@@ -138,7 +149,9 @@ mod tests {
 
     #[test]
     fn parses_month_specs() {
-        Parser::new("when month feb to mar").parse_schedule().unwrap();
+        Parser::new("when month feb to mar")
+            .parse_schedule()
+            .unwrap();
         Parser::new("when month 10").parse_schedule().unwrap();
     }
 

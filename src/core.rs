@@ -1,9 +1,55 @@
-use std::ops::Range;
+use std::{num::NonZeroU8, ops::Range};
 
-use chrono::Month;
+use chrono::{Month, Weekday};
 use smallvec::SmallVec;
 
 use crate::error::{Error, Result};
+
+// TODO: Revisit ZeroToN to check if we want to use it
+// struct ZeroToN<const N: usize>(NonZeroU8);
+
+// impl <const N: usize> ZeroToN<N> {
+//     pub fn new(val: u8) -> Option<Self> {
+//         (val <= (N as u8)).then(|| {
+//             // Safety: val+1 can never be zero once val is unsigned
+//             Self(unsafe { NonZeroU8::new_unchecked(val + 1) })
+//         })
+//     }
+// }
+
+#[derive(Debug)]
+pub struct Hour(NonZeroU8);
+
+impl Hour {
+    pub fn new(val: u8) -> Option<Self> {
+        (val <= 24).then(|| {
+            // Safety: val+1 can never be zero once val is unsigned
+            Self(unsafe { NonZeroU8::new_unchecked(val + 1) })
+        })
+    }
+
+    pub fn as_u8(&self) -> u8 {
+        // Cannot underflow
+        self.0.get() - 1
+    }
+}
+
+#[derive(Debug)]
+pub struct Minute(NonZeroU8);
+
+impl Minute {
+    pub fn new(val: u8) -> Option<Self> {
+        (val <= 60).then(|| {
+            // Safety: val+1 can never be zero once val is unsigned
+            Self(unsafe { NonZeroU8::new_unchecked(val + 1) })
+        })
+    }
+
+    pub fn as_u8(&self) -> u8 {
+        // Cannot underflow
+        self.0.get() - 1
+    }
+}
 
 #[derive(Debug)]
 pub struct MonthDay(u8);
@@ -69,7 +115,7 @@ pub enum DateTimePartKind {
 }
 
 impl DateTimePartKind {
-    pub fn from_str(value: &str) -> Result<Self> {
+    pub fn parse(value: &str) -> Result<Self> {
         match value {
             _x if value.eq_ignore_ascii_case("month") => Ok(Self::Month),
             _x if value.eq_ignore_ascii_case("day") => Ok(Self::Day),
@@ -78,19 +124,6 @@ impl DateTimePartKind {
             _x if value.eq_ignore_ascii_case("minute") => Ok(Self::Minute),
             _x if value.eq_ignore_ascii_case("every") => Ok(Self::Every),
             _ => Err(Error::UnknownDateTimePart(value.into())),
-        }
-    }
-
-    /// The identifier of this date-time part kind as found in the schedule syntax.
-    ///
-    /// E.g. `"month"` in `"when month December"`.
-    pub fn identifier(&self) -> &str {
-        match self {
-            DateTimePartKind::Month => "month",
-            DateTimePartKind::Day => "day",
-            DateTimePartKind::Hour => "hour",
-            DateTimePartKind::Minute => "minute",
-            DateTimePartKind::Every => "every",
         }
     }
 }
@@ -108,9 +141,22 @@ pub enum Spec {
 #[derive(Debug)]
 pub struct Schedule {
     /// The specification for month days
+    pub(crate) hour_spec: SmallVec<[DateTimePart<Hour>; 2]>,
+    /// The specification for month days
+    pub(crate) minute_spec: SmallVec<[DateTimePart<Minute>; 2]>,
+    /// The specification for month days
     pub(crate) day_spec: SmallVec<[DateTimePart<MonthDay>; 4]>,
     /// The specification for months
     pub(crate) month_spec: SmallVec<[DateTimePart<Month>; 4]>,
+    /// The specification for months
+    pub(crate) weekday_spec: SmallVec<[DateTimePart<Weekday>; 4]>,
+    // TODO: add timezone
+}
+
+impl Default for Schedule {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Schedule {
@@ -118,6 +164,9 @@ impl Schedule {
         Self {
             month_spec: SmallVec::new(),
             day_spec: SmallVec::new(),
+            weekday_spec: SmallVec::new(),
+            hour_spec: SmallVec::new(),
+            minute_spec: SmallVec::new(),
         }
     }
 }
