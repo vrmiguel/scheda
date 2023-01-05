@@ -1,9 +1,6 @@
-use std::{num::NonZeroU8};
+use std::{num::NonZeroU8, ops::Range};
 
-use chrono::{Month, Weekday};
-use smallvec::SmallVec;
-
-use crate::{Error, Result};
+use crate::{as_u8::AsU8, Error, Result};
 
 #[derive(Debug)]
 pub struct Hour(NonZeroU8);
@@ -16,7 +13,7 @@ impl Hour {
         })
     }
 
-    pub fn as_u8(&self) -> u8 {
+    pub fn get(&self) -> u8 {
         // Cannot underflow
         self.0.get() - 1
     }
@@ -33,7 +30,7 @@ impl Minute {
         })
     }
 
-    pub fn as_u8(&self) -> u8 {
+    pub fn get(&self) -> u8 {
         // Cannot underflow
         self.0.get() - 1
     }
@@ -47,41 +44,9 @@ impl MonthDay {
         (day > 0 && day <= 31).then_some(Self(day))
     }
 
-    pub fn as_u8(&self) -> u8 {
+    pub fn get(&self) -> u8 {
         self.0
     }
-}
-
-
-/// Specification for months.
-///
-/// Months themselves might be described by:
-/// * their month numbers (1 to 12)
-/// * their full names in EN locale (e.g. `"January"`)
-/// * their abbreviated names in `strftime` EN locale
-///     * `Jan`, `Feb`, `Mar`, `Apr`, `May`, `Jun`, `Jul`, `Aug`, `Sep`, `Oct`, `Nov` and `Dec`
-///
-/// # Syntax
-///
-/// ## Single months
-///
-/// ```no-rust
-/// when month Dec
-/// when month December
-/// when month 10
-/// ```
-///
-/// ## Ranges
-///
-/// ```no-rust
-/// when month Jan to Apr
-/// when month June to October
-/// when month 1 to 9
-/// when month 3 to Dec
-/// ```
-pub enum MonthSpec {
-    Single(Month),
-    Range { starting: Month, ending: Month },
 }
 
 pub enum DateTimePartKind {
@@ -108,44 +73,21 @@ impl DateTimePartKind {
 }
 
 #[derive(Debug)]
+/// Either a single date-time part or a range of them.
+///
+/// E.g. `when day 2` or `when weekday Thu to Fri`
 pub enum DateTimePart<T> {
     Single(T),
     Range { starting: T, ending: T },
 }
 
-pub enum Spec {
-    Month(MonthSpec),
-}
-
-#[derive(Debug)]
-pub struct Schedule {
-    /// The specification for month days
-    pub hour_spec: SmallVec<[DateTimePart<Hour>; 2]>,
-    /// The specification for month days
-    pub minute_spec: SmallVec<[DateTimePart<Minute>; 2]>,
-    /// The specification for month days
-    pub day_spec: SmallVec<[DateTimePart<MonthDay>; 4]>,
-    /// The specification for months
-    pub month_spec: SmallVec<[DateTimePart<Month>; 4]>,
-    /// The specification for months
-    pub weekday_spec: SmallVec<[DateTimePart<Weekday>; 4]>,
-    // TODO: add timezone
-}
-
-impl Default for Schedule {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Schedule {
-    pub fn new() -> Self {
-        Self {
-            month_spec: SmallVec::new(),
-            day_spec: SmallVec::new(),
-            weekday_spec: SmallVec::new(),
-            hour_spec: SmallVec::new(),
-            minute_spec: SmallVec::new(),
+impl<T: AsU8> DateTimePart<T> {
+    pub fn contains(&self, other: &T) -> bool {
+        match self {
+            DateTimePart::Single(single) => single.as_u8() == other.as_u8(),
+            DateTimePart::Range { starting, ending } => {
+                (starting.as_u8()..=ending.as_u8()).contains(&other.as_u8())
+            }
         }
     }
 }

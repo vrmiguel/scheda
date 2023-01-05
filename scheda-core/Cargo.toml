@@ -11,3 +11,6 @@ logos = "0.12.1"
 nom = "7.1.2"
 num-traits = "0.2.15"
 smallvec = "1.10.0"
+
+[dev-dependencies]
+scheda-parser = { path = "../scheda-parser" }

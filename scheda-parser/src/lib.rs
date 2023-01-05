@@ -27,7 +27,7 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn eat_when(&mut self) -> Result<()> {
+    fn eat_when(&mut self) -> Result<()> {
         let (before_when, remaining) = self
             .input
             .split_once("when")
@@ -43,12 +43,14 @@ impl<'a> Parser<'a> {
 
     fn parse_kind<'b>(&'a self, value: &'b str) -> Result<(DateTimePartKind, &'b str)> {
         // TODO: treat error
-        let (identifier, rest) = value.split_once(' ').unwrap();
+        let (identifier, rest) = value.split_once(' ').ok_or(Error::InvalidSyntax(
+            "expected a date-time part identifier, such as `month` or `hour`".into(),
+        ))?;
 
         DateTimePartKind::parse(identifier).map(|kind| (kind, rest))
     }
 
-    pub fn parse_atom_or_range<T: AtomParse + WellFormedRange>(
+    fn parse_atom_or_range<T: AtomParse + WellFormedRange>(
         &mut self,
         value: &str,
     ) -> Result<DateTimePart<T>> {
@@ -59,13 +61,14 @@ impl<'a> Parser<'a> {
             }),
             Err(_) => {
                 // TODO: why error handling so bad :C
-                let atom = T::parse_atom(value).ok_or(Error::InvalidSyntax(value.into()))?;
+                let atom =
+                    T::parse_atom(value).ok_or(Error::InvalidSyntax(value.to_string().into()))?;
                 Ok(DateTimePart::Single(atom))
             }
         }
     }
 
-    pub fn parse_spec(&mut self, value: &str) -> Result<()> {
+    fn parse_spec(&mut self, value: &str) -> Result<()> {
         let (kind, rest) = self.parse_kind(value)?;
 
         for item in rest.split(" or ") {
@@ -112,7 +115,7 @@ impl<'a> Parser<'a> {
 
 fn nothing() {}
 
-pub fn parse_range<T: AtomParse + WellFormedRange>(input: &str) -> Result<Range<T>> {
+fn parse_range<T: AtomParse + WellFormedRange>(input: &str) -> Result<Range<T>> {
     fn parse_inner<T: AtomParse + WellFormedRange>(input: &str) -> Option<Range<T>> {
         let mut parts = input.trim().split(' ');
 

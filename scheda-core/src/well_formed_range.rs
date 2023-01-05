@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use chrono::{Month, Weekday};
 
-use crate::{types::MonthDay, Hour, Minute};
+use crate::{as_u8::AsU8, types::MonthDay, Hour, Minute};
 
 pub trait WellFormedRange: Sized {
     fn is_well_formed(range: &Range<Self>) -> bool;
